@@ -1,0 +1,5 @@
+*.db
+*.db-journal
+*.log
+reports/
+__pycache__/
