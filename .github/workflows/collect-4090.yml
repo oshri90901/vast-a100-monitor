@@ -1,0 +1,33 @@
+name: collect-4090
+
+# Same pattern as collect.yml, for RTX 4090. The 4090 market is ~10x larger
+# (~1,000 machines, ~180 API calls per scan), so it polls every 10 minutes (keeps the repo growing ~3MB/day).
+on:
+  schedule:
+    - cron: "47 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write   # this repo only
+
+concurrency:
+  group: collect-4090
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 358
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Poll Vast.ai every 10 minutes
+        env:
+          VAST_API_KEY: ${{ secrets.VAST_API_KEY }}
+        run: python -u monitor.py --gpus "RTX 4090" --db /tmp/run.db --interval 600 --duration 345 --export-dir data-4090 --chunk-minutes 60 --git-push

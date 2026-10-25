@@ -34,8 +34,10 @@ def _csv_text(cols, rows):
     return buf.getvalue()
 
 
-def export_chunk(db, out_dir, since, until):
-    """Write rows with since <= ts < until into out_dir/YYYY-MM-DD/HHMMSS-*.gz. Returns written paths."""
+def export_chunk(db, out_dir, since, until, skip_machines=None):
+    """Write rows with since <= ts < until into out_dir/YYYY-MM-DD/HHMMSS-*.gz. Returns written paths.
+
+    Machines in skip_machines (a set, updated in place) were already exported and are left out."""
     snaps = db.execute(f"SELECT {', '.join(SNAP_COLS)} FROM snapshots WHERE ts >= ? AND ts < ? ORDER BY ts",
                        (since, until)).fetchall()
     polls = db.execute(f"SELECT {', '.join(POLL_COLS)} FROM polls WHERE ts >= ? AND ts < ? ORDER BY ts",
@@ -45,6 +47,9 @@ def export_chunk(db, out_dir, since, until):
     cur = db.execute("SELECT * FROM machines WHERE last_seen >= ? AND last_seen < ?", (since, until))
     names = [d[0] for d in cur.description]
     machines = [dict(zip(names, r)) for r in cur.fetchall()]
+    if skip_machines is not None:
+        machines = [m for m in machines if m["machine_id"] not in skip_machines]
+        skip_machines.update(m["machine_id"] for m in machines)
 
     t0 = datetime.fromtimestamp(polls[0][0], timezone.utc)
     base = os.path.join(out_dir, t0.strftime("%Y-%m-%d"), t0.strftime("%H%M%S"))

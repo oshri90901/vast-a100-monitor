@@ -20,3 +20,11 @@ python report.py --hours 168 --csv reports
 price-vs-utilization curve, and exports CSVs.
 
 Local collection without GitHub: `python monitor.py` (polls every 60s into vast_a100.db).
+
+## RTX 4090
+A second workflow, `.github/workflows/collect-4090.yml`, tracks RTX 4090 offers every 10 minutes
+into `data-4090/` (the 4090 market is ~1,000 machines, ~180 API calls per scan).
+```
+python sync.py --data-dir data-4090 --db vast_4090.db
+python report.py --db vast_4090.db --bucket 0.05 --hours 168 --csv reports-4090
+```

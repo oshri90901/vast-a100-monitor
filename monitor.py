@@ -327,7 +327,11 @@ def main():
     ap.add_argument("--export-dir", help="also write gzip data chunks into this directory")
     ap.add_argument("--chunk-minutes", type=float, default=30, help="minutes per exported chunk")
     ap.add_argument("--git-push", action="store_true", help="commit and push each exported chunk")
+    ap.add_argument("--gpus", help="comma-separated Vast gpu_name values to track (default: A100 models)")
     args = ap.parse_args()
+    if args.gpus:
+        global GPU_NAMES
+        GPU_NAMES = [g.strip() for g in args.gpus.split(",")]
 
     mon = Monitor(args.db)
     log(f"DB: {args.db} | known machines: {len(mon.prev)} | interval: {args.interval}s")
@@ -336,13 +340,14 @@ def main():
         return
 
     t_start = time.time()
+    exported_machines = set()   # specs are exported once per run; snapshots carry the changing fields
     chunk_start = int(t_start)
 
     def export(until):
         nonlocal chunk_start
         if not args.export_dir:
             return
-        paths = vastdata.export_chunk(mon.db, args.export_dir, chunk_start, until)
+        paths = vastdata.export_chunk(mon.db, args.export_dir, chunk_start, until, exported_machines)
         chunk_start = until
         if paths:
             log(f"exported {paths[0]}")
